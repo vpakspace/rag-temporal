@@ -248,7 +248,7 @@ class KGClient:
                     COALESCE(e.id, e.uuid) AS id,
                     COALESCE(e.name, '') AS name,
                     COALESCE(e.entity_type, head(labels(e))) AS entity_type,
-                    COALESCE(e.summary, e.description, '') AS summary
+                    COALESCE(e.summary, '') AS summary
                 LIMIT $limit
                 """,
                 limit=limit,

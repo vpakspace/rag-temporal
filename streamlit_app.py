@@ -139,7 +139,7 @@ def tab_ingest(t):
     with col_b:
         skip_kg = st.checkbox(t("ingest_skip_kg"), value=not st.session_state.get("kg_enabled", True))
 
-    if st.button(t("ingest_button"), type="primary", use_container_width=True):
+    if st.button(t("ingest_button"), type="primary", width="stretch"):
         file_path = None
 
         # Determine source
@@ -275,7 +275,7 @@ def tab_kg(t):
                     }
                     for e in entities
                 ],
-                use_container_width=True,
+                width="stretch",
             )
         else:
             st.info(t("kg_no_data"))
@@ -294,7 +294,7 @@ def tab_kg(t):
                     }
                     for r in rels
                 ],
-                use_container_width=True,
+                width="stretch",
             )
         else:
             st.info(t("kg_no_data"))
@@ -324,7 +324,7 @@ def tab_kg(t):
                         }
                         for f in facts
                     ],
-                    use_container_width=True,
+                    width="stretch",
                 )
             else:
                 st.info(t("search_no_results"))
@@ -383,7 +383,7 @@ def tab_benchmark(t):
                         }
                         for r in bench["results"]
                     ],
-                    use_container_width=True,
+                    width="stretch",
                 )
 
 
