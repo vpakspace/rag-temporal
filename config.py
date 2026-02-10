@@ -24,9 +24,10 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
 
     # Neo4j (shared container: temporal-kb-neo4j)
+    # Credentials loaded from .env — no hardcoded defaults for password
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
-    neo4j_password: str = "temporal_kb_2026"
+    neo4j_password: str = ""
 
     # Chunking
     chunk_size: int = 800

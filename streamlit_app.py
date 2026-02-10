@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -109,14 +111,16 @@ def render_sidebar(t):
         try:
             store = get_vector_store()
             st.metric(t("vector_chunks"), store.count())
-        except Exception:
+        except Exception as e:
+            logging.getLogger(__name__).debug("Vector store stats unavailable: %s", e)
             st.metric(t("vector_chunks"), "N/A")
 
         if st.session_state.get("kg_enabled", True):
             try:
                 kg = get_kg_client()
                 st.metric(t("kg_entities"), kg.entity_count())
-            except Exception:
+            except Exception as e:
+                logging.getLogger(__name__).debug("KG stats unavailable: %s", e)
                 st.metric(t("kg_entities"), "N/A")
 
 
@@ -155,6 +159,8 @@ def tab_ingest(t):
             st.warning(t("warning") + ": No file selected")
             return
 
+        tmp_file_created = uploaded is not None  # track if we created a temp file
+
         with st.spinner(t("ingest_processing")):
             try:
                 store = get_vector_store()
@@ -182,6 +188,9 @@ def tab_ingest(t):
 
             except Exception as e:
                 st.error(f"{t('error')}: {e}")
+            finally:
+                if tmp_file_created and file_path and os.path.exists(file_path):
+                    os.unlink(file_path)
 
 
 # --- Tab: Search & Q&A ---

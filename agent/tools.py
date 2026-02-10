@@ -36,4 +36,10 @@ def _load_rag20_tools():
         sys.path[:] = orig_path
 
 
-vector_search, focused_search, full_document_read = _load_rag20_tools()
+try:
+    vector_search, focused_search, full_document_read = _load_rag20_tools()
+except (ImportError, FileNotFoundError) as e:
+    raise ImportError(
+        f"Cannot load RAG 2.0 tools from {_rag_root}. "
+        f"Ensure ~/rag-2.0 exists with agent/tools.py: {e}"
+    ) from e

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import importlib
 import logging
 from dataclasses import dataclass
 
@@ -138,17 +137,9 @@ class DualPipeline:
 
     def _run_kg_track(self, text: str, source: str) -> int:
         """KG track: ingest via Graphiti (async)."""
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, self._kg_ingest(text, source))
-                    return future.result()
-            else:
-                return asyncio.run(self._kg_ingest(text, source))
-        except RuntimeError:
-            return asyncio.run(self._kg_ingest(text, source))
+        from utils.async_helpers import run_async
+
+        return run_async(self._kg_ingest(text, source))
 
     async def _kg_ingest(self, text: str, source: str) -> int:
         """Async KG ingestion."""
@@ -171,5 +162,5 @@ class DualPipeline:
         if self._kg_client and self._kg_connected:
             try:
                 asyncio.run(self._kg_client.close())
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("KG client close error: %s", e)

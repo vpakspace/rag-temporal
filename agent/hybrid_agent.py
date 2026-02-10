@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -142,17 +141,9 @@ class HybridAgent:
         if not self._kg_client:
             return []
         try:
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
-                        future = pool.submit(asyncio.run, self._kg_client.search(query))
-                        facts = future.result()
-                else:
-                    facts = asyncio.run(self._kg_client.search(query))
-            except RuntimeError:
-                facts = asyncio.run(self._kg_client.search(query))
+            from utils.async_helpers import run_async
+
+            facts = run_async(self._kg_client.search(query))
 
             return [
                 {
@@ -232,6 +223,12 @@ class HybridAgent:
 
         Flow: classify → select_tool → execute → evaluate → [retry?] → generate
         """
+        if not query or not query.strip():
+            return QAResult(
+                answer="Empty query.",
+                sources=[], confidence=0.0, query=query, retries=0,
+            )
+
         state = AgentState(query=query)
 
         state = self.classify_query(state)

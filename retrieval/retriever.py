@@ -43,4 +43,10 @@ def _load_rag20_retriever():
         sys.path[:] = orig_path
 
 
-Retriever = _load_rag20_retriever()
+try:
+    Retriever = _load_rag20_retriever()
+except (ImportError, FileNotFoundError) as e:
+    raise ImportError(
+        f"Cannot load RAG 2.0 Retriever from {_rag_root}. "
+        f"Ensure ~/rag-2.0 exists with retrieval/retriever.py: {e}"
+    ) from e

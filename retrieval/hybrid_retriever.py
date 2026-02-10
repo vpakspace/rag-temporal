@@ -103,20 +103,10 @@ class HybridRetriever:
 
     def _kg_search(self, query: str, num_results: int = 5) -> list[HybridResult]:
         """Knowledge graph search via Graphiti."""
-        import asyncio
+        from utils.async_helpers import run_async
 
         try:
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
-                        future = pool.submit(asyncio.run, self._kg_client.search(query, num_results))
-                        facts = future.result()
-                else:
-                    facts = asyncio.run(self._kg_client.search(query, num_results))
-            except RuntimeError:
-                facts = asyncio.run(self._kg_client.search(query, num_results))
+            facts = run_async(self._kg_client.search(query, num_results))
 
             return [
                 HybridResult(

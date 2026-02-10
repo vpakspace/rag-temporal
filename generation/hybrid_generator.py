@@ -6,14 +6,19 @@ import logging
 from typing import TYPE_CHECKING
 
 from config import settings
-from core.models import QAResult, SearchResult
+from core.models import QAResult
 
 if TYPE_CHECKING:
     from openai import OpenAI
 
-    from retrieval.hybrid_retriever import HybridRetriever
+    from retrieval.hybrid_retriever import HybridResult, HybridRetriever
 
 logger = logging.getLogger(__name__)
+
+# Named constants
+_MAX_RELEVANCE_SCORE = 5.0
+_FALLBACK_RELEVANCE = 2.5
+_CONTEXT_PREVIEW_CHARS = 1500
 
 
 def hybrid_answer(
@@ -37,6 +42,12 @@ def hybrid_answer(
         openai_client: Optional OpenAI client
         mode: "hybrid" | "vector" | "kg"
     """
+    if not query or not query.strip():
+        return QAResult(
+            answer="Empty query.",
+            sources=[], confidence=0.0, query=query, retries=0,
+        )
+
     if openai_client is None:
         from openai import OpenAI
         openai_client = OpenAI(api_key=settings.openai_api_key)
@@ -92,14 +103,14 @@ def hybrid_answer(
     return QAResult(
         answer=answer,
         sources=[],
-        confidence=best_score / 5.0,
+        confidence=best_score / _MAX_RELEVANCE_SCORE,
         query=query,
         expanded_query=current_query if retries_used > 0 else "",
         retries=retries_used,
     )
 
 
-def _build_context(results) -> str:
+def _build_context(results: list[HybridResult]) -> str:
     """Build context string from HybridResults, marking KG facts with temporal info."""
     parts: list[str] = []
     for i, r in enumerate(results, 1):
@@ -112,7 +123,7 @@ def _build_context(results) -> str:
     return "\n\n".join(parts)
 
 
-def _evaluate_relevance(query: str, context: str, openai_client) -> float:
+def _evaluate_relevance(query: str, context: str, openai_client: OpenAI) -> float:
     """Quick relevance evaluation (1-5 scale)."""
     prompt = f"""Rate how relevant this context is to the query (1-5).
 Return ONLY a number.
@@ -120,7 +131,7 @@ Return ONLY a number.
 Query: {query}
 
 Context (first 1500 chars):
-{context[:1500]}
+{context[:_CONTEXT_PREVIEW_CHARS]}
 
 Score:"""
 
@@ -130,16 +141,16 @@ Score:"""
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
         )
-        text = response.choices[0].message.content or "2.5"
+        text = response.choices[0].message.content or str(_FALLBACK_RELEVANCE)
         return float(text.strip().split()[0])
     except (ValueError, IndexError):
-        return 2.5
+        return _FALLBACK_RELEVANCE
     except Exception as e:
         logger.error("Relevance evaluation failed: %s", e)
-        return 2.5
+        return _FALLBACK_RELEVANCE
 
 
-def _expand_with_kg(query: str, openai_client) -> str:
+def _expand_with_kg(query: str, openai_client: OpenAI) -> str:
     """Expand query to include knowledge-graph oriented terms."""
     prompt = f"""Rewrite this query to also search for related entities, temporal facts, and relationships.
 Keep it concise (1-2 sentences).
@@ -155,11 +166,12 @@ Expanded:"""
             temperature=0.5,
         )
         return response.choices[0].message.content or query
-    except Exception:
+    except Exception as e:
+        logger.warning("KG query expansion failed: %s", e)
         return query
 
 
-def _generate(query: str, context: str, openai_client) -> str:
+def _generate(query: str, context: str, openai_client: OpenAI) -> str:
     """Generate final answer from context."""
     system_prompt = (
         "You are a precise Q&A assistant. Answer ONLY based on the provided context. "
