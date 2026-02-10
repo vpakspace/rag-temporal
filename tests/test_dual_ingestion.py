@@ -59,8 +59,11 @@ class TestDualPipelineRAGOnly:
     def test_ingest_file_not_found(self):
         mock_store = MagicMock()
         mock_store.init_index = MagicMock()
+        mock_loader = MagicMock()
+        mock_loader.load_file.side_effect = FileNotFoundError("No such file")
 
-        with patch("storage.vector_store.VectorStore", return_value=mock_store):
+        with patch("storage.vector_store.VectorStore", return_value=mock_store), \
+             patch("ingestion.dual_pipeline._import_rag", return_value=mock_loader):
             pipeline = DualPipeline(vector_store=mock_store)
             result = pipeline.ingest_file("/nonexistent/file.txt")
             assert result.rag_chunks == 0

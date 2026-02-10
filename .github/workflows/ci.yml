@@ -40,5 +40,8 @@ jobs:
           ruff check --select=E,F,W --ignore=E501,F401 .
 
       - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          OPENAI_API_KEY: "test-key-for-ci"
         run: |
           pytest tests/ -x -q
