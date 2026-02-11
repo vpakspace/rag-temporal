@@ -72,5 +72,7 @@ if not (RAG_ROOT / "core" / "models.py").exists():
     vector_store_module = ModuleType("storage.vector_store")
     vector_store_module.VectorStore = type("VectorStore", (), {})
 
+    storage_module.vector_store = vector_store_module
+
     sys.modules["storage"] = storage_module
     sys.modules["storage.vector_store"] = vector_store_module
